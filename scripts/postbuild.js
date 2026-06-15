@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+const fs = require("fs");
+
+const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -10,4 +12,7 @@
 <body>
   <p>Redirecting to <a href="/brainstormer/setup">Brainstormer</a>...</p>
 </body>
-</html>
+</html>`;
+
+fs.writeFileSync("docs/index.html", html);
+console.log("✓ docs/index.html replaced with meta-refresh redirect");

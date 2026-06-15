@@ -16,8 +16,7 @@
 # next.js
 /.next/
 /out/
-
-# keep docs/ unignored (GitHub Pages deployment)
+/docs/
 
 # production
 /build

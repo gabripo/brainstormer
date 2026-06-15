@@ -19,8 +19,8 @@ export default function InterestsInput() {
         rows={3}
       />
       <p className="text-xs text-gray-400">
-        Principle 2 — Focus on interests, not positions. Ask "why?" to uncover
-        the real needs behind each party's stance.
+        Principle 2 — Focus on interests, not positions. Ask &quot;why?&quot; to uncover
+        the real needs behind each party&apos;s stance.
       </p>
     </div>
   );

@@ -21,8 +21,6 @@ const sections = [
   { id: "norms", icon: CheckSquare, label: "Session Norms" },
 ];
 
-const stagger = 0.1;
-
 export default function SetupPage() {
   const router = useRouter();
   const { state, dispatch } = useBrainstorm();

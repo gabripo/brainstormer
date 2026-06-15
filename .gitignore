@@ -15,11 +15,9 @@
 /.next/
 /out/
 
-# github pages static export — only ignore generated junk inside docs
-/docs/*.txt
-/docs/*.svg
-/docs/_next/
-/docs/_not-found/
+# github pages static export — ignore generated metadata junk
+/docs/**/*.txt
+/docs/**/*.svg
 
 # production
 /build

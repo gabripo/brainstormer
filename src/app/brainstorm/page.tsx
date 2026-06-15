@@ -15,6 +15,13 @@ export default function BrainstormPage() {
   const router = useRouter();
   const { state, dispatch } = useBrainstorm();
   const [showRules, setShowRules] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+
+  useEffect(() => {
+    if (finishing && state.phase === "review") {
+      router.push("/review");
+    }
+  }, [finishing, state.phase, router]);
 
   useEffect(() => {
     if (state.phase === "setup") {
@@ -26,7 +33,7 @@ export default function BrainstormPage() {
 
   const handleFinish = () => {
     dispatch({ type: "END_BRAINSTORM" });
-    router.push("/review");
+    setFinishing(true);
   };
 
   return (

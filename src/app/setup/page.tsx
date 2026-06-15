@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { flushSync } from "react-dom";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Brain, ArrowRight, Users, Target, BookOpen, CheckSquare } from "lucide-react";
 import { useBrainstorm } from "@/context/BrainstormContext";
@@ -25,18 +25,23 @@ const sections = [
 export default function SetupPage() {
   const router = useRouter();
   const { state, dispatch } = useBrainstorm();
+  const [starting, setStarting] = useState(false);
 
   const canStart =
     state.situationDescription.trim().length > 0 &&
     state.attendees.length >= 2 &&
     state.attendees.some((a) => a.isMediator);
 
+  useEffect(() => {
+    if (starting && state.phase === "brainstorm") {
+      router.push("/brainstorm");
+    }
+  }, [starting, state.phase, router]);
+
   const handleStart = () => {
     if (canStart) {
-      flushSync(() => {
-        dispatch({ type: "START_BRAINSTORM" });
-      });
-      router.push("/brainstorm");
+      dispatch({ type: "START_BRAINSTORM" });
+      setStarting(true);
     }
   };
 

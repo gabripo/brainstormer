@@ -15,7 +15,9 @@ import { getRandomStickyColor } from "@/utils/colors";
 
 const initialState: BrainstormState = {
   phase: "setup",
-  problemDescription: "",
+  situationDescription: "",
+  relationshipDynamics: "",
+  interests: "",
   attendees: [],
   ideas: [],
   discardedIdeaIds: [],
@@ -26,8 +28,14 @@ function brainstormReducer(
   action: BrainstormAction
 ): BrainstormState {
   switch (action.type) {
-    case "SET_PROBLEM":
-      return { ...state, problemDescription: action.payload };
+    case "SET_SITUATION":
+      return { ...state, situationDescription: action.payload };
+
+    case "SET_RELATIONSHIP_DYNAMICS":
+      return { ...state, relationshipDynamics: action.payload };
+
+    case "SET_INTERESTS":
+      return { ...state, interests: action.payload };
 
     case "ADD_ATTENDEE": {
       const trimmed = action.payload.trim();
@@ -119,6 +127,24 @@ function brainstormReducer(
   }
 }
 
+function migrateState(saved: Record<string, unknown>): BrainstormState {
+  if (saved.problemDescription && !saved.situationDescription) {
+    saved.situationDescription = saved.problemDescription as string;
+  }
+  return {
+    phase: (saved.phase as BrainstormState["phase"]) || initialState.phase,
+    situationDescription:
+      (saved.situationDescription as string) || initialState.situationDescription,
+    relationshipDynamics:
+      (saved.relationshipDynamics as string) || initialState.relationshipDynamics,
+    interests: (saved.interests as string) || initialState.interests,
+    attendees: (saved.attendees as Attendee[]) || initialState.attendees,
+    ideas: (saved.ideas as Idea[]) || initialState.ideas,
+    discardedIdeaIds:
+      (saved.discardedIdeaIds as string[]) || initialState.discardedIdeaIds,
+  };
+}
+
 interface BrainstormContextValue {
   state: BrainstormState;
   dispatch: React.Dispatch<BrainstormAction>;
@@ -130,7 +156,10 @@ const BrainstormContext = createContext<BrainstormContextValue | null>(null);
 export function BrainstormProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(brainstormReducer, initialState, () => {
     const saved = loadState();
-    return saved || initialState;
+    if (saved) {
+      return migrateState(saved as unknown as Record<string, unknown>);
+    }
+    return initialState;
   });
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

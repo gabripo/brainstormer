@@ -9,7 +9,6 @@
 - **Animations**: Framer Motion (page transitions, sticky note physics, fade effects)
 - **State**: React Context + useReducer (persisted to LocalStorage)
 - **Icons**: Lucide React
-- **ID generation**: nanoid
 
 ### Directory Structure
 
@@ -20,7 +19,7 @@ brainstormer/
 │   │   ├── layout.tsx           # Root layout (fonts, global styles, Provider, AnimatePresence)
 │   │   ├── page.tsx             # Root — redirects to /setup
 │   │   ├── setup/
-│   │   │   └── page.tsx         # Page 1: attendees, problem, mediator
+│   │   │   └── page.tsx         # Page 1: frame session using Getting to Yes
 │   │   ├── brainstorm/
 │   │   │   └── page.tsx         # Page 2: sticky-note idea collection
 │   │   └── review/
@@ -38,21 +37,23 @@ brainstormer/
 │   │   ├── attendee/
 │   │   │   ├── AttendeeList.tsx
 │   │   │   └── AttendeeInput.tsx
+│   │   ├── SituationInput.tsx    # Neutral situation + relationship dynamics
+│   │   ├── InterestsInput.tsx    # Underlying interests & needs
+│   │   ├── SessionNorms.tsx      # Commitment checklist (principles toggles)
 │   │   ├── GettingToYesInfographic.tsx
-│   │   ├── ProblemTextbox.tsx
 │   │   ├── ProgressIndicator.tsx
 │   │   └── PageTransition.tsx
 │   ├── context/
 │   │   └── BrainstormContext.tsx
 │   ├── types/
 │   │   └── index.ts
-│   ├── utils/
-│   │   ├── storage.ts
-│   │   ├── colors.ts
-│   │   └── constants.ts
-│   └── hooks/
-│       └── useLocalStorage.ts
+│   └── utils/
+│       ├── storage.ts
+│       ├── colors.ts
+│       └── constants.ts
 ├── public/
+├── scripts/
+│   └── postbuild.js
 ├── tailwind.config.ts
 ├── tsconfig.json
 └── package.json
@@ -83,7 +84,9 @@ export interface Idea {
 
 export interface BrainstormState {
   phase: AppPhase;
-  problemDescription: string;
+  situationDescription: string;    // Neutral framing of the issue
+  relationshipDynamics: string;    // Personal dynamics (separate people from problem)
+  interests: string;               // Underlying interests & needs
   attendees: Attendee[];
   ideas: Idea[];
   discardedIdeaIds: string[];
@@ -96,7 +99,7 @@ export interface BrainstormState {
 
 - **Provider** wraps `layout.tsx`
 - **useReducer** with actions:
-  - `SET_PROBLEM`
+  - `SET_SITUATION` / `SET_RELATIONSHIP_DYNAMICS` / `SET_INTERESTS`
   - `ADD_ATTENDEE` / `REMOVE_ATTENDEE` / `SET_MEDIATOR`
   - `START_BRAINSTORM`
   - `ADD_IDEA` / `TOGGLE_PREFERRED` / `REMOVE_IDEA`
@@ -104,8 +107,9 @@ export interface BrainstormState {
   - `DISCARD_IDEA` / `RESTORE_IDEA`
   - `COMPLETE_SESSION`
   - `RESET_SESSION`
+- **Migration**: Old `problemDescription` key from previous sessions is migrated to `situationDescription` on load.
 - **LocalStorage sync**: On every state change (debounced 500ms), serialize to `localStorage.setItem('brainstormer-state', JSON.stringify(state))`
-- **Hydration**: On mount, read from LocalStorage; if valid, restore state.
+- **Hydration**: On mount, read from LocalStorage; if valid, migrate and restore.
 
 ---
 
@@ -113,28 +117,42 @@ export interface BrainstormState {
 
 ### Page 1: `/setup` (Start Page)
 
+The landing page is structured around **"Getting to Yes" principled negotiation** — it guides users through preparation before brainstorming.
+
 **Layout:**
 - Background: Subtle gradient
 - Fade-in entrance animation (Framer Motion)
-- App title "Brainstormer" with tagline
+- App title "Brainstormer" with tagline referencing Getting to Yes
+
+**4 sections (each in a Card):**
+
+| # | Section | Principle Applied | Input |
+|---|---------|-------------------|-------|
+| 1 | **The Situation** | Separate people from the problem | Two textareas: situation (neutral facts) + relationship dynamics |
+| 2 | **Interests & Needs** | Focus on interests, not positions | Single textarea for underlying needs |
+| 3 | **The Team** | — (attendee logistics) | Attendee list with mediator designation |
+| 4 | **Session Norms** | All principles + brainstorming rules | Toggle chips for 6 norms — group commitment ritual |
 
 **Components:**
-1. **GettingToYesInfographic** — Side panel showing key principles as cards
-2. **ProblemTextbox** — Large textarea for issue description
-3. **AttendeeList** — Add attendees, designate one as mediator
-4. **"Brainstorm!" button** — Disabled until: problem non-empty, ≥ 2 attendees, exactly 1 mediator
-5. **ProgressIndicator** — Step 1 of 3
+1. **GettingToYesInfographic** — Side panel showing 4 principles as cards + mediator tip
+2. **SituationInput** — Neutral situation framing + relationship dynamics (separates people from problem)
+3. **InterestsInput** — Interests and needs identification (focus on interests, not positions)
+4. **SessionNorms** — 6 toggleable commitment chips (principles + brainstorming rules)
+5. **AttendeeList** — Add attendees, designate one as mediator
+6. **"Brainstorm!" button** — Disabled until: situation non-empty, ≥ 2 attendees, exactly 1 mediator
+7. **ProgressIndicator** — Step 1 of 3
 
 **Validation on submit:**
-- Problem must not be empty
+- Situation must not be empty
 - Must have ≥ 2 attendees
 - Must have exactly 1 mediator
+- Interests and norms are encouraged but not required
 
 ### Page 2: `/brainstorm` (Idea Collection)
 
 **Layout:**
 - Full-screen board for sticky notes
-- Top bar: problem statement, phase indicator
+- Top bar: situation + interests + dynamics (collapsible), phase indicator
 
 **Components:**
 1. **StickyNoteBoard** — Masonry/flow layout of notes
@@ -169,7 +187,7 @@ export interface BrainstormState {
 
 ### Summary View (after finalize)
 - Final list of kept ideas (preferred first)
-- Problem statement
+- Situation + interests + dynamics displayed
 - Attendee list
 - "Start New Session" button (resets state)
 
@@ -203,14 +221,14 @@ Sticky note colors:
 
 ## 6. Getting to Yes Infographics Content
 
-| # | Principle | Icon |
-|---|-----------|------|
-| 1 | **Separate people from the problem** | 👥→📋 |
-| 2 | **Focus on interests, not positions** | 🔍→💡 |
-| 3 | **Invent options for mutual gain** | 💡×💡 |
-| 4 | **Insist on objective criteria** | ⚖️ |
-| 5 | **Defer judgment** | ✋ |
-| 6 | **Build on others' ideas** | 🧱 |
+| # | Principle | Icon | Used On |
+|---|-----------|------|---------|
+| 1 | **Separate people from the problem** | 👥→📋 | Setup (SituationInput), Sidebar |
+| 2 | **Focus on interests, not positions** | 🔍→💡 | Setup (InterestsInput), Sidebar |
+| 3 | **Invent options for mutual gain** | 💡×💡 | Brainstorm page, Sidebar |
+| 4 | **Insist on objective criteria** | ⚖️ | Review page, Sidebar |
+| 5 | **Defer judgment** | ✋ | SessionNorms, Brainstorm sidebar |
+| 6 | **Build on others' ideas** | 🧱 | SessionNorms, Brainstorm sidebar |
 
 Each displayed as a card with staggered fade-in animation.
 
@@ -228,8 +246,9 @@ interface PersistedState {
 }
 ```
 
-- **Read**: On mount, check `localStorage.getItem(STORAGE_KEY)`, parse, validate
+- **Read**: On mount, check `localStorage.getItem(STORAGE_KEY)`, parse, migrate old keys
 - **Write**: After every state change (debounced 500ms)
+- **Migration**: `problemDescription` → `situationDescription`
 - **Clear**: On "Start New Session"
 - **Error handling**: Corrupt data → clear key, start fresh
 
@@ -238,17 +257,17 @@ interface PersistedState {
 ## 8. Implementation Task Breakdown (Execution Order)
 
 ### Phase A: Project Scaffolding
-1. Initialize Next.js project (`npx create-next-app@latest` with TypeScript, Tailwind, App Router)
-2. Install dependencies: `framer-motion`, `lucide-react`, `nanoid`
-3. Configure `tailwind.config.ts` with custom colors/fonts
+1. Initialize Next.js project
+2. Install dependencies: `framer-motion`, `lucide-react`
+3. Configure Tailwind with custom colors
 4. Create directory structure
 
 ### Phase B: Types & State
 5. Write `src/types/index.ts` with all interfaces
 6. Write `src/utils/storage.ts` (localStorage get/set/clear)
-7. Write `src/utils/colors.ts` (sticky note color palette + random picker)
+7. Write `src/utils/colors.ts` (sticky note color palette)
 8. Write `src/utils/constants.ts` (Getting to Yes principles data)
-9. Write `src/context/BrainstormContext.tsx` (provider, reducer, actions)
+9. Write `src/context/BrainstormContext.tsx` (provider, reducer, actions, migration)
 
 ### Phase C: Shared UI Components
 10. Write `src/components/ui/Button.tsx`
@@ -262,26 +281,28 @@ interface PersistedState {
 16. Write `src/components/GettingToYesInfographic.tsx`
 17. Write `src/components/attendee/AttendeeInput.tsx`
 18. Write `src/components/attendee/AttendeeList.tsx`
-19. Write `src/components/ProblemTextbox.tsx`
-20. Write `src/app/setup/page.tsx` (compose all setup components)
+19. Write `src/components/SituationInput.tsx` (replaces ProblemTextbox)
+20. Write `src/components/InterestsInput.tsx`
+21. Write `src/components/SessionNorms.tsx`
+22. Write `src/app/setup/page.tsx` (compose 4-section layout)
 
 ### Phase E: Page 2 — Brainstorm (`/brainstorm`)
-21. Write `src/components/sticky-note/StickyNote.tsx`
-22. Write `src/components/sticky-note/StickyNoteBoard.tsx`
-23. Write `src/app/brainstorm/page.tsx`
+23. Write `src/components/sticky-note/StickyNote.tsx`
+24. Write `src/components/sticky-note/StickyNoteBoard.tsx`
+25. Write `src/app/brainstorm/page.tsx`
 
 ### Phase F: Page 3 — Review (`/review`)
-24. Write `src/app/review/page.tsx`
+26. Write `src/app/review/page.tsx`
 
 ### Phase G: Root Layout & Routing
-25. Write `src/app/layout.tsx` (Provider + global layout + AnimatePresence)
-26. Write `src/app/page.tsx` (redirect to `/setup`)
+27. Write `src/app/layout.tsx` (Provider + global layout + AnimatePresence)
+28. Write `src/app/page.tsx` (redirect to `/setup`)
 
 ### Phase H: Polish & Testing
-27. Add focus rings and keyboard accessibility
-28. Add responsive styles (mobile-first)
-29. Add error boundaries
-30. Run `npm run build` and fix any issues
+29. Add focus rings and keyboard accessibility
+30. Add responsive styles (mobile-first)
+31. Add error boundaries
+32. Run `npm run build` and fix any issues
 
 ---
 
@@ -294,8 +315,7 @@ interface PersistedState {
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "framer-motion": "^11.0.0",
-    "lucide-react": "^0.400.0",
-    "nanoid": "^5.0.0"
+    "lucide-react": "^0.400.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
@@ -314,7 +334,7 @@ interface PersistedState {
 ## 10. Responsiveness & Accessibility
 
 - **Mobile**: Single-column layout, collapsible infographic
-- **Desktop**: Masonry sticky notes, sidebar infographic
+- **Desktop**: Side-by-side layout, sticky infographic panel
 - **Keyboard**: All actions Tab/Enter/Escape accessible
 - **ARIA**: Labels on all interactive elements
 - **Error states**: Toast for localStorage issues, disabled buttons with tooltips

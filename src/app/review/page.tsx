@@ -85,8 +85,26 @@ export default function ReviewPage() {
               The Problem
             </div>
             <p className="text-lg font-medium text-text-main">
-              {state.problemDescription}
+              {state.situationDescription}
             </p>
+            {state.interests && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-100 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-amber-700">
+                  Interests & Needs
+                </div>
+                <p className="text-sm text-amber-900">{state.interests}</p>
+              </div>
+            )}
+            {state.relationshipDynamics && (
+              <div className="mt-2 rounded-lg bg-blue-50 border border-blue-100 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-700">
+                  Relationship Dynamics
+                </div>
+                <p className="text-sm text-blue-900">
+                  {state.relationshipDynamics}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm mb-6">

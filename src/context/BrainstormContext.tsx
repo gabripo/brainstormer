@@ -54,7 +54,12 @@ function brainstormReducer(
         (a) => a.id === action.payload
       )?.isMediator;
       if (hadMediator && filtered.length > 0) {
-        filtered[0].isMediator = true;
+        return {
+          ...state,
+          attendees: filtered.map((a, i) =>
+            i === 0 ? { ...a, isMediator: true } : a
+          ),
+        };
       }
       return { ...state, attendees: filtered };
     }

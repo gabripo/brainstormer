@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 import { motion } from "framer-motion";
 import { Brain, ArrowRight, Users, Target, BookOpen, CheckSquare } from "lucide-react";
 import { useBrainstorm } from "@/context/BrainstormContext";
@@ -32,7 +33,9 @@ export default function SetupPage() {
 
   const handleStart = () => {
     if (canStart) {
-      dispatch({ type: "START_BRAINSTORM" });
+      flushSync(() => {
+        dispatch({ type: "START_BRAINSTORM" });
+      });
       router.push("/brainstorm");
     }
   };

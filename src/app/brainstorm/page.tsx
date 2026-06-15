@@ -29,10 +29,6 @@ export default function BrainstormPage() {
     router.push("/review");
   };
 
-  if (state.phase === "setup") {
-    return null;
-  }
-
   return (
     <PageTransition className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">

@@ -15,10 +15,8 @@
 /.next/
 /out/
 
-# github pages static export — ignore generated metadata junk and build cache
+# github pages static export — ignore build cache
 /docs/dev/
-/docs/**/*.txt
-/docs/**/*.svg
 
 # production
 /build

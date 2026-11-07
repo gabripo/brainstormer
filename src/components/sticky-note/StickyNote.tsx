@@ -79,6 +79,15 @@ export default function StickyNote({
         >
           {idea.content}
         </p>
+        {idea.authorName && (
+          <p
+            className="mt-2 text-[11px] font-semibold opacity-70"
+            style={{ color: color.text }}
+          >
+            {idea.authorIsAI ? "🤖 " : ""}
+            {idea.authorName}
+          </p>
+        )}
 
         {showRemove && (
           <button

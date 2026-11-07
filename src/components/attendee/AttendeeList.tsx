@@ -1,9 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Crown } from "lucide-react";
+import { X, Crown, Bot } from "lucide-react";
 import { useBrainstorm } from "@/context/BrainstormContext";
 import AttendeeInput from "./AttendeeInput";
+import AIAttendeeInput from "@/components/ai/AIAttendeeInput";
+import AISettingsPanel from "@/components/ai/AISettingsPanel";
 
 export default function AttendeeList() {
   const { state, dispatch } = useBrainstorm();
@@ -20,6 +22,7 @@ export default function AttendeeList() {
       </div>
 
       <AttendeeInput />
+      <AIAttendeeInput />
 
       <div className="flex flex-wrap gap-2">
         <AnimatePresence mode="popLayout">
@@ -31,17 +34,21 @@ export default function AttendeeList() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={`group flex items-center gap-2 rounded-xl border px-3.5 py-2 transition-all duration-200 cursor-pointer ${
-                attendee.isMediator
-                  ? "border-primary/40 bg-primary/5 shadow-sm"
-                  : "border-gray-200 bg-white hover:border-gray-300"
+              className={`group flex items-center gap-2 rounded-xl border px-3.5 py-2 transition-all duration-200 ${
+                attendee.isAI
+                  ? "border-dashed border-violet-300 bg-violet-50/60 cursor-default"
+                  : attendee.isMediator
+                    ? "border-primary/40 bg-primary/5 shadow-sm cursor-pointer"
+                    : "border-gray-200 bg-white hover:border-gray-300 cursor-pointer"
               }`}
-              onClick={() =>
+              title={attendee.isAI ? attendee.persona : "Click to make mediator"}
+              onClick={() => {
+                if (attendee.isAI) return;
                 dispatch({
                   type: "SET_MEDIATOR",
                   payload: attendee.id,
-                })
-              }
+                });
+              }}
             >
               <div
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
@@ -50,7 +57,11 @@ export default function AttendeeList() {
                     : "bg-gray-100 text-gray-500"
                 }`}
               >
-                {attendee.name.charAt(0).toUpperCase()}
+                {attendee.isAI ? (
+                  <Bot className="h-3.5 w-3.5 text-violet-600" aria-label="AI attendee" />
+                ) : (
+                  attendee.name.charAt(0).toUpperCase()
+                )}
               </div>
               <span
                 className={`text-sm font-medium ${
@@ -84,9 +95,11 @@ export default function AttendeeList() {
 
       {state.attendees.length === 0 && (
         <p className="text-center text-xs text-gray-400 py-4">
-          Add at least 2 attendees. The first person added becomes the mediator.
+          Add at least 2 attendees. The first person added becomes the mediator; AI attendees can join but never mediate.
         </p>
       )}
+
+      {state.attendees.some((a) => a.isAI) && <AISettingsPanel defaultOpen />}
     </div>
   );
 }

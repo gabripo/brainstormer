@@ -43,7 +43,21 @@ function brainstormReducer(
       const newAttendee: Attendee = {
         id: crypto.randomUUID(),
         name: trimmed,
-        isMediator: state.attendees.length === 0,
+        isMediator: !state.attendees.some((a) => a.isMediator),
+      };
+      return { ...state, attendees: [...state.attendees, newAttendee] };
+    }
+
+    case "ADD_AI_ATTENDEE": {
+      const name = action.payload.name.trim();
+      const persona = action.payload.persona.trim();
+      if (!name || !persona) return state;
+      const newAttendee: Attendee = {
+        id: crypto.randomUUID(),
+        name,
+        isMediator: false, // only humans can mediate
+        isAI: true,
+        persona,
       };
       return { ...state, attendees: [...state.attendees, newAttendee] };
     }
@@ -53,11 +67,12 @@ function brainstormReducer(
       const hadMediator = state.attendees.find(
         (a) => a.id === action.payload
       )?.isMediator;
-      if (hadMediator && filtered.length > 0) {
+      const firstHuman = filtered.find((a) => !a.isAI);
+      if (hadMediator && firstHuman) {
         return {
           ...state,
-          attendees: filtered.map((a, i) =>
-            i === 0 ? { ...a, isMediator: true } : a
+          attendees: filtered.map((a) =>
+            a.id === firstHuman.id ? { ...a, isMediator: true } : a
           ),
         };
       }
@@ -65,6 +80,9 @@ function brainstormReducer(
     }
 
     case "SET_MEDIATOR":
+      if (state.attendees.find((a) => a.id === action.payload)?.isAI) {
+        return state; // an AI attendee cannot be the mediator
+      }
       return {
         ...state,
         attendees: state.attendees.map((a) => ({
@@ -86,6 +104,25 @@ function brainstormReducer(
         isPreferred: false,
         createdAt: Date.now(),
         color: JSON.stringify(color),
+      };
+      return { ...state, ideas: [...state.ideas, newIdea] };
+    }
+
+    case "ADD_AI_IDEA": {
+      const content = action.payload.content.trim();
+      if (!content) return state;
+      const duplicate = state.ideas.some(
+        (i) => i.content.toLowerCase() === content.toLowerCase()
+      );
+      if (duplicate) return state;
+      const newIdea: Idea = {
+        id: crypto.randomUUID(),
+        content,
+        isPreferred: false,
+        createdAt: Date.now(),
+        color: JSON.stringify(getRandomStickyColor()),
+        authorName: action.payload.authorName,
+        authorIsAI: true,
       };
       return { ...state, ideas: [...state.ideas, newIdea] };
     }

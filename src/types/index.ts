@@ -4,6 +4,10 @@ export interface Attendee {
   id: string;
   name: string;
   isMediator: boolean;
+  /** AI attendees generate ideas through a language model. */
+  isAI?: boolean;
+  /** How an AI attendee thinks and what it cares about. */
+  persona?: string;
 }
 
 export interface Idea {
@@ -12,6 +16,9 @@ export interface Idea {
   isPreferred: boolean;
   createdAt: number;
   color: string;
+  /** Set when an AI attendee proposed the idea. */
+  authorName?: string;
+  authorIsAI?: boolean;
 }
 
 export interface BrainstormState {
@@ -29,10 +36,12 @@ export type BrainstormAction =
   | { type: "SET_RELATIONSHIP_DYNAMICS"; payload: string }
   | { type: "SET_INTERESTS"; payload: string }
   | { type: "ADD_ATTENDEE"; payload: string }
+  | { type: "ADD_AI_ATTENDEE"; payload: { name: string; persona: string } }
   | { type: "REMOVE_ATTENDEE"; payload: string }
   | { type: "SET_MEDIATOR"; payload: string }
   | { type: "START_BRAINSTORM" }
   | { type: "ADD_IDEA"; payload: string }
+  | { type: "ADD_AI_IDEA"; payload: { content: string; authorName: string } }
   | { type: "TOGGLE_PREFERRED"; payload: string }
   | { type: "REMOVE_IDEA"; payload: string }
   | { type: "END_BRAINSTORM" }

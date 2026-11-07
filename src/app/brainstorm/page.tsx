@@ -3,19 +3,61 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, CheckCircle, Lightbulb, ArrowLeft } from "lucide-react";
+import { Sparkles, CheckCircle, Lightbulb, ArrowLeft, Bot, Loader2 } from "lucide-react";
 import { useBrainstorm } from "@/context/BrainstormContext";
 import PageTransition from "@/components/PageTransition";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import GettingToYesInfographic from "@/components/GettingToYesInfographic";
 import StickyNoteBoard from "@/components/sticky-note/StickyNoteBoard";
 import Button from "@/components/ui/Button";
+import AISettingsPanel from "@/components/ai/AISettingsPanel";
+import { generateIdeas, isAIConfigured, loadAISettings } from "@/utils/ai";
 
 export default function BrainstormPage() {
   const router = useRouter();
   const { state, dispatch } = useBrainstorm();
   const [showRules, setShowRules] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [thinking, setThinking] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const aiAttendees = state.attendees.filter((a) => a.isAI);
+
+  // Each AI attendee takes a turn, seeing the ideas the previous ones just added.
+  const askAI = async () => {
+    const settings = loadAISettings();
+    if (!isAIConfigured(settings)) {
+      setAiError("Set up the AI first: add your Claude API key or Ollama address in AI settings.");
+      return;
+    }
+    setAiError(null);
+    let snapshot = state;
+    for (const agent of aiAttendees) {
+      setThinking(agent.name);
+      try {
+        const ideas = await generateIdeas(agent, snapshot, settings);
+        for (const content of ideas) {
+          dispatch({ type: "ADD_AI_IDEA", payload: { content, authorName: agent.name } });
+        }
+        snapshot = {
+          ...snapshot,
+          ideas: [
+            ...snapshot.ideas,
+            ...ideas.map((content) => ({
+              id: content,
+              content,
+              isPreferred: false,
+              createdAt: Date.now(),
+              color: "",
+            })),
+          ],
+        };
+      } catch (e) {
+        setAiError(e instanceof Error ? e.message : "The AI request failed.");
+        break;
+      }
+    }
+    setThinking(null);
+  };
 
   useEffect(() => {
     if (finishing && state.phase === "review") {
@@ -65,7 +107,23 @@ export default function BrainstormPage() {
             <span>{state.ideas.length} ideas</span>
           </div>
 
-          <Button size="sm" onClick={handleFinish} disabled={state.ideas.length === 0}>
+          {aiAttendees.length > 0 && (
+            <Button size="sm" variant="secondary" onClick={askAI} disabled={thinking !== null}>
+              {thinking ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {thinking} is thinking…
+                </>
+              ) : (
+                <>
+                  <Bot className="h-4 w-4" />
+                  Ask AI attendees
+                </>
+              )}
+            </Button>
+          )}
+
+          <Button size="sm" onClick={handleFinish} disabled={state.ideas.length === 0 || thinking !== null}>
             <CheckCircle className="h-4 w-4" />
             Brainstormed!
           </Button>
@@ -95,6 +153,12 @@ export default function BrainstormPage() {
             )}
           </div>
 
+          {aiError && (
+            <div role="alert" className="mx-6 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {aiError}
+            </div>
+          )}
+
           <StickyNoteBoard mode="brainstorm" showRemove />
         </main>
 
@@ -115,6 +179,14 @@ export default function BrainstormPage() {
             </motion.span>
           </button>
           {showRules && <GettingToYesInfographic compact={false} variant="rules" />}
+          {aiAttendees.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-gray-500">
+                AI attendees: {aiAttendees.map((a) => a.name).join(", ")}
+              </p>
+              <AISettingsPanel />
+            </div>
+          )}
         </aside>
       </div>
     </PageTransition>
